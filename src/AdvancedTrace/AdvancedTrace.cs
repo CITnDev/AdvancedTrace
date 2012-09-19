@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 
 namespace AdvancedTraceLib
 {
-    public class AdvancedTrace
+    public static class AdvancedTrace
     {
         private static readonly Dictionary<string, Dictionary<Type, List<TraceListener>>> Tracers;
         private static readonly List<TraceListener> TraceAll;
@@ -31,7 +30,6 @@ namespace AdvancedTraceLib
             Tracers = new Dictionary<string, Dictionary<Type, List<TraceListener>>>();
             TraceAll = new List<TraceListener>();
 
-            AddTraceType(ListenerType.All);
             AddTraceType(ListenerType.Information);
             AddTraceType(ListenerType.Warning);
             AddTraceType(ListenerType.Error);
@@ -46,10 +44,7 @@ namespace AdvancedTraceLib
 
         #region TraceListener management
 
-        /// <summary>
-        /// Add a trace type
-        /// </summary>
-        /// <param name="type">String that represents the type</param>
+        // Add a trace type
         public static void AddTraceType(string type)
         {
             if (type == ListenerType.All)
@@ -57,21 +52,17 @@ namespace AdvancedTraceLib
 
             lock (Tracers)
             {
-                if (!Tracers.ContainsKey(type))
-                    Tracers[type] = new Dictionary<Type, List<TraceListener>>();
+                if (Tracers.ContainsKey(type))
+                    throw new ArgumentException("The trace type is already registred.");
+
+                Tracers[type] = new Dictionary<Type, List<TraceListener>>();
             }
 
-            lock (Tracers[type])
+            lock (TraceAll)
             {
-                lock (TraceAll)
-                {
-                    foreach (var listener in TraceAll)
-                    {
-                        InternalAddListener(type, listener);
-                    }
-                }
+                foreach (var listener in TraceAll)
+                    InternalAddListener(type, listener);
             }
-
         }
 
         // Add a TraceListener to a type
@@ -82,9 +73,7 @@ namespace AdvancedTraceLib
                 lock (Tracers)
                 {
                     foreach (var tracerKey in Tracers.Keys)
-                    {
                         InternalAddListener(tracerKey, traceListener);
-                    }
                 }
 
                 lock (TraceAll)
@@ -94,8 +83,11 @@ namespace AdvancedTraceLib
             }
             else
             {
-                lock (Tracers[type])
+                lock (Tracers)
                 {
+                    if (!Tracers.ContainsKey(type))
+                        throw new ArgumentException(string.Format("The trace type '{0}' must be registred before adding a trace listener.", type));
+
                     InternalAddListener(type, traceListener);
                 }
             }
@@ -104,20 +96,22 @@ namespace AdvancedTraceLib
         // Remove a TraceListener from a type
         public static void RemoveTraceListener(string type, TraceListener traceListener)
         {
-            var listenerType = traceListener.GetType();
+            var traceListenerType = traceListener.GetType();
+
             if (type == ListenerType.All)
             {
                 lock (TraceAll)
                 {
                     TraceAll.Remove(traceListener);
                 }
+
                 lock (Tracers)
                 {
                     foreach (var tracerKey in Tracers.Keys)
                     {
                         lock (Tracers[tracerKey])
                         {
-                            Tracers[tracerKey][listenerType].Remove(traceListener);
+                            Tracers[tracerKey][traceListenerType].Remove(traceListener);
                         }
                     }
                 }
@@ -126,14 +120,22 @@ namespace AdvancedTraceLib
             {
                 lock (Tracers[type])
                 {
-                    Tracers[type][listenerType].Remove(traceListener);
+                    if (!Tracers.ContainsKey(type))
+                        throw new ArgumentException("Cannot remove the trace listener as the trace type is unknown.");
+
+                    Tracers[type][traceListenerType].Remove(traceListener);
                 }
             }
         }
 
-        // Remove a TraceListener from a type
+        // Remove all trace listeners
         public static void RemoveAllTraceListener()
         {
+            lock (TraceAll)
+            {
+                TraceAll.Clear();
+            }
+
             lock (Tracers)
             {
                 Tracers.Clear();
@@ -144,153 +146,192 @@ namespace AdvancedTraceLib
 
         #region Our trace methods
 
-        public static void Trace(string pstrTrace, bool writeLine = true)
-        {
-            Trace(ListenerType.Information, pstrTrace, writeLine);
-        }
-
-        public static void Trace(string pstrType, string pstrTrace, bool writeLine = true)
+        public static void Trace(string type, string trace, bool writeLine = true)
         {
             Action<TraceListener> traceAction = listener =>
             {
                 if (listener is AdvancedTraceListener)
+                {
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(pstrType, pstrTrace);
+                        ((AdvancedTraceListener)listener).WriteLineEx(type, trace);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(pstrType, pstrTrace);
+                        ((AdvancedTraceListener)listener).WriteEx(type, trace);
+                }
                 else
-                    listener.WriteLine(pstrTrace);
+                {
+                    if (writeLine)
+                        listener.WriteLine(trace);
+                    else
+                        listener.Write(trace);
+                }
             };
 
-            CommonWrite(pstrType, traceAction);
+            CommonWrite(type, traceAction);
         }
 
-        public static void Trace(string pstrType, string pstrTrace, string pstrCategory, bool writeLine = true)
+        public static void Trace(string type, string trace, string category, bool writeLine = true)
         {
             Action<TraceListener> traceAction = listener =>
             {
                 if (listener is AdvancedTraceListener)
+                {
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(pstrType, pstrTrace, pstrCategory);
+                        ((AdvancedTraceListener)listener).WriteLineEx(type, trace, category);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(pstrType, pstrTrace, pstrCategory);
+                        ((AdvancedTraceListener)listener).WriteEx(type, trace, category);
+                }
                 else
-                    listener.WriteLine(pstrTrace);
+                {
+                    if (writeLine)
+                        listener.WriteLine(trace, category);
+                    else
+                        listener.Write(trace, category);
+                }
             };
 
-            CommonWrite(pstrType, traceAction);
+            CommonWrite(type, traceAction);
         }
 
-        public static void Trace(string pstrType, object poTrace, bool writeLine = true)
+        public static void Trace(string type, object trace, bool writeLine = true)
         {
             Action<TraceListener> traceAction = listener =>
             {
                 if (listener is AdvancedTraceListener)
+                {
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(pstrType, poTrace);
+                        ((AdvancedTraceListener)listener).WriteLineEx(type, trace);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(pstrType, poTrace);
+                        ((AdvancedTraceListener)listener).WriteEx(type, trace);
+                }
                 else
-                    listener.WriteLine(poTrace);
+                {
+                    if (writeLine)
+                        listener.WriteLine(trace);
+                    else
+                        listener.Write(trace);
+                }
             };
 
-            CommonWrite(pstrType, traceAction);
+            CommonWrite(type, traceAction);
         }
 
-        public static void Trace(string pstrType, object poTrace, string pstrCategory, bool writeLine = true)
+        public static void Trace(string type, object trace, string category, bool writeLine = true)
         {
             Action<TraceListener> traceAction = listener =>
             {
                 if (listener is AdvancedTraceListener)
+                {
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(pstrType, poTrace, pstrCategory);
+                        ((AdvancedTraceListener)listener).WriteLineEx(type, trace, category);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(pstrType, poTrace, pstrCategory);
+                        ((AdvancedTraceListener)listener).WriteEx(type, trace, category);
+                }
                 else
-                    listener.WriteLine(poTrace);
+                {
+                    if (writeLine)
+                        listener.WriteLine(trace, category);
+                    else
+                        listener.Write(trace, category);
+                }
             };
 
-            CommonWrite(pstrType, traceAction);
+            CommonWrite(type, traceAction);
         }
 
-        public static void Trace(string pstrType, string pstrTrace, Exception poException, bool writeLine = true)
+        public static void Trace(string type, string trace, Exception exception, bool writeLine = true)
         {
             Action<TraceListener> traceAction = listener =>
             {
                 if (listener is AdvancedTraceListener)
+                {
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(pstrType, pstrTrace, poException);
+                        ((AdvancedTraceListener)listener).WriteLineEx(type, trace, exception);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(pstrType, pstrTrace, poException);
+                        ((AdvancedTraceListener)listener).WriteEx(type, trace, exception);
+                }
                 else
-                    listener.WriteLine(pstrTrace + " " + poException.ToString());
+                {
+                    if (writeLine)
+                        listener.WriteLine(trace + " " + exception);
+                    else
+                        listener.Write(trace + " " + exception);
+                }
             };
 
-            CommonWrite(pstrType, traceAction);
+            CommonWrite(type, traceAction);
         }
 
-        public static void Trace(string pstrType, string pstrTrace, Exception poException, string pstrCategory, bool writeLine = true)
+        public static void Trace(string type, string trace, Exception exception, string category, bool writeLine = true)
         {
             Action<TraceListener> traceAction = listener =>
             {
                 if (listener is AdvancedTraceListener)
+                {
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(pstrType, pstrTrace, poException, pstrCategory);
+                        ((AdvancedTraceListener)listener).WriteLineEx(type, trace, exception, category);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(pstrType, pstrTrace, poException, pstrCategory);
+                        ((AdvancedTraceListener)listener).WriteEx(type, trace, exception, category);
+                }
                 else
-                    listener.WriteLine(pstrTrace + " " + poException.ToString(), pstrCategory);
+                {
+                    if (writeLine)
+                        listener.WriteLine(trace + " " + exception, category);
+                    else
+                        listener.Write(trace + " " + exception, category);
+                }
             };
 
-            CommonWrite(pstrType, traceAction);
+            CommonWrite(type, traceAction);
         }
 
-        public static void Trace(string[] pstrTypeArray, string pstrTrace)
+        public static void Trace(string[] types, string trace, bool writeLine = true)
         {
-            for (int i = 0; pstrTypeArray != null && i < pstrTypeArray.Length; i++)
-                Trace(pstrTypeArray[i], pstrTrace);
+            for (int i = 0; types != null && i < types.Length; i++)
+                Trace(types[i], trace, writeLine);
         }
 
-        public static void Trace(string[] pstrTypeArray, string pstrTrace, string pstrCategory)
+        public static void Trace(string[] types, string trace, string category, bool writeLine = true)
         {
-            for (int i = 0; pstrTypeArray != null && i < pstrTypeArray.Length; i++)
-                Trace(pstrTypeArray[i], pstrTrace, pstrCategory);
+            for (int i = 0; types != null && i < types.Length; i++)
+                Trace(types[i], trace, category, writeLine);
         }
 
-        public static void Trace(string[] pstrTypeArray, object poTrace)
+        public static void Trace(string[] types, object trace, bool writeLine = true)
         {
-            for (int i = 0; pstrTypeArray != null && i < pstrTypeArray.Length; i++)
-                Trace(pstrTypeArray[i], poTrace);
+            for (int i = 0; types != null && i < types.Length; i++)
+                Trace(types[i], trace, writeLine);
         }
 
-        public static void Trace(string[] pstrTypeArray, object poTrace, string pstrCategory)
+        public static void Trace(string[] types, object trace, string category, bool writeLine = true)
         {
-            for (int i = 0; pstrTypeArray != null && i < pstrTypeArray.Length; i++)
-                Trace(pstrTypeArray[i], poTrace, pstrCategory);
+            for (int i = 0; types != null && i < types.Length; i++)
+                Trace(types[i], trace, category, writeLine);
         }
 
-        public static void Trace(string[] pstrTypeArray, string pstrTrace, Exception poException)
+        public static void Trace(string[] types, string trace, Exception exception, bool writeLine = true)
         {
-            if (poException == null)
+            if (exception == null)
             {
-                Trace(pstrTypeArray, pstrTrace);
+                Trace(types, trace, writeLine);
+
                 return;
             }
 
-            for (int i = 0; pstrTypeArray != null && i < pstrTypeArray.Length; i++)
-                Trace(pstrTypeArray[i], pstrTrace, poException);
+            for (int i = 0; types != null && i < types.Length; i++)
+                Trace(types[i], trace, exception, writeLine);
         }
 
-        public static void Trace(string[] pstrTypeArray, string pstrTrace, Exception poException, string pstrCategory)
+        public static void Trace(string[] types, string trace, Exception exception, string category, bool writeLine = true)
         {
-            if (poException == null)
+            if (exception == null)
             {
-                Trace(pstrTypeArray, pstrTrace, pstrCategory);
+                Trace(types, trace, category, writeLine);
+
                 return;
             }
 
-            for (int i = 0; pstrTypeArray != null && i < pstrTypeArray.Length; i++)
-                Trace(pstrTypeArray[i], pstrTrace, poException, pstrCategory);
+            for (int i = 0; types != null && i < types.Length; i++)
+                Trace(types[i], trace, exception, category, writeLine);
         }
 
         public static void Flush()
@@ -303,67 +344,80 @@ namespace AdvancedTraceLib
 
         #endregion
 
-        // Legacy Debug and Trace methods
+        #region Tools
 
-        #region Debug.XXX / Trace.XXX
-
-        public static void Write(string pstrTrace)
+        private static void CommonWrite(string type, Action<TraceListener> traceAction)
         {
-            Trace(pstrTrace, false);
+            Dictionary<Type, List<TraceListener>> listeners;
+
+            lock (Tracers)
+            {
+                if (!Tracers.TryGetValue(type, out listeners))
+                    return;
+            }
+
+            // Trace listeners added to Information type
+            lock (listeners)
+                listeners.AsParallel().ForAll(dict => dict.Value.ForEach(traceAction));
         }
 
-        public static void Write(string pstrTrace, string pstrCategory)
+        private static void InternalAddListener(string type, TraceListener traceListener)
         {
-            Trace(pstrTrace, pstrCategory, false);
-        }
+            var listenerType = traceListener.GetType();
 
-        public static void Write(object poTrace)
-        {
-            Trace(ListenerType.Information, poTrace, false);
-        }
+            lock (Tracers[type])
+            {
+                if (!Tracers[type].ContainsKey(listenerType))
+                    Tracers[type].Add(listenerType, new List<TraceListener>());
 
-        public static void Write(object poTrace, string pstrCategory)
-        {
-            Trace(ListenerType.Information, poTrace, pstrCategory, false);
-        }
-
-        public static void WriteLine(string pstrTrace)
-        {
-            Trace(ListenerType.Information, pstrTrace);
-        }
-
-        public static void WriteLine(string pstrTrace, string pstrCategory)
-        {
-            Trace(ListenerType.Information, pstrTrace, pstrCategory);
-        }
-
-        public static void WriteLine(object poTrace)
-        {
-            Trace(ListenerType.Information, poTrace);
-        }
-
-        public static void WriteLine(object poTrace, string pstrCategory)
-        {
-            Trace(ListenerType.Information, poTrace, pstrCategory);
+                Tracers[type][listenerType].Add(traceListener);
+            }
         }
 
         #endregion
 
-        #region Trace.TraceXXX
+        // Legacy Debug and Trace methods
 
-        public static void TraceInformation(string pstrTrace)
+        #region Debug.XXX / Trace.XXX
+
+        public static void Write(string trace)
         {
-            Trace(ListenerType.Information, pstrTrace);
+            Trace(ListenerType.Information, trace, false);
         }
 
-        public static void TraceWarning(string pstrTrace)
+        public static void Write(string trace, string category)
         {
-            Trace(ListenerType.Warning, pstrTrace);
+            Trace(ListenerType.Information, trace, category, false);
         }
 
-        public static void TraceError(string pstrTrace)
+        public static void Write(object trace)
         {
-            Trace(ListenerType.Error, pstrTrace);
+            Trace(ListenerType.Information, trace, false);
+        }
+
+        public static void Write(object trace, string category)
+        {
+            Trace(ListenerType.Information, trace, category, false);
+        }
+
+        public static void WriteLine(string trace)
+        {
+            Trace(ListenerType.Information, trace);
+        }
+
+        public static void WriteLine(string trace, string category)
+        {
+            Trace(ListenerType.Information, trace, category);
+        }
+
+        public static void WriteLine(object trace)
+        {
+            Trace(ListenerType.Information, trace);
+        }
+
+        public static void WriteLine(object trace, string category)
+        {
+            Trace(ListenerType.Information, trace, category);
         }
 
         #endregion
@@ -372,219 +426,174 @@ namespace AdvancedTraceLib
 
         #region TraceInformation
 
-        public static void TraceInformation(string pstrTrace, string pstrCategory)
+        public static void TraceInformation(string trace)
         {
-            Trace(ListenerType.Information, pstrTrace, pstrCategory);
+            Trace(ListenerType.Information, trace);
         }
 
-        public static void TraceInformation(string pstrTrace, Exception poException)
+        public static void TraceInformation(string trace, string category)
         {
-            Trace(ListenerType.Information, pstrTrace, poException);
+            Trace(ListenerType.Information, trace, category);
         }
 
-        public static void TraceInformation(string pstrTrace, Exception poException, string pstrCategory)
+        public static void TraceInformation(string trace, Exception exception)
         {
-            Trace(ListenerType.Information, pstrTrace, poException, pstrCategory);
+            Trace(ListenerType.Information, trace, exception);
+        }
+
+        public static void TraceInformation(string trace, Exception exception, string category)
+        {
+            Trace(ListenerType.Information, trace, exception, category);
         }
 
         #endregion
 
         #region TraceWarning
 
-        public static void TraceWarning(string pstrTrace, string pstrCategory)
+        public static void TraceWarning(string trace)
         {
-            Trace(ListenerType.Warning, pstrTrace, pstrCategory);
+            Trace(ListenerType.Warning, trace);
         }
 
-        public static void TraceWarning(string pstrTrace, Exception poException)
+        public static void TraceWarning(string trace, string category)
         {
-            Trace(ListenerType.Warning, pstrTrace, poException);
+            Trace(ListenerType.Warning, trace, category);
         }
 
-        public static void TraceWarning(string pstrTrace, Exception poException, string pstrCategory)
+        public static void TraceWarning(string trace, Exception exception)
         {
-            Trace(ListenerType.Warning, pstrTrace, poException, pstrCategory);
+            Trace(ListenerType.Warning, trace, exception);
+        }
+
+        public static void TraceWarning(string trace, Exception exception, string category)
+        {
+            Trace(ListenerType.Warning, trace, exception, category);
         }
 
         #endregion
 
         #region TraceError
 
-        public static void TraceError(string pstrTrace, string pstrCategory)
+        public static void TraceError(string trace)
         {
-            Trace(ListenerType.Error, pstrTrace, pstrCategory);
+            Trace(ListenerType.Error, trace);
         }
 
-        public static void TraceError(string pstrTrace, Exception poException)
+        public static void TraceError(string trace, string category)
         {
-            Trace(ListenerType.Error, pstrTrace, poException);
+            Trace(ListenerType.Error, trace, category);
         }
 
-        public static void TraceError(string pstrTrace, Exception poException, string pstrCategory)
+        public static void TraceError(string trace, Exception exception)
         {
-            Trace(ListenerType.Error, pstrTrace, poException, pstrCategory);
+            Trace(ListenerType.Error, trace, exception);
+        }
+
+        public static void TraceError(string trace, Exception exception, string category)
+        {
+            Trace(ListenerType.Error, trace, exception, category);
         }
 
         #endregion
 
         #region TraceProblem
 
-        public static void TraceProblem(string pstrTrace)
+        public static void TraceProblem(string trace)
         {
-            Trace(ListenerType.Problem, pstrTrace);
+            Trace(ListenerType.Problem, trace);
         }
 
-        public static void TraceProblem(string pstrTrace, string pstrCategory)
+        public static void TraceProblem(string trace, string category)
         {
-            Trace(ListenerType.Problem, pstrTrace, pstrCategory);
+            Trace(ListenerType.Problem, trace, category);
         }
 
-        public static void TraceProblem(string pstrTrace, Exception poException)
+        public static void TraceProblem(string trace, Exception exception)
         {
-            Trace(ListenerType.Problem, pstrTrace, poException);
+            Trace(ListenerType.Problem, trace, exception);
         }
 
-        public static void TraceProblem(string pstrTrace, Exception poException, string pstrCategory)
+        public static void TraceProblem(string trace, Exception exception, string category)
         {
-            Trace(ListenerType.Problem, pstrTrace, poException, pstrCategory);
+            Trace(ListenerType.Problem, trace, exception, category);
         }
 
         #endregion
 
         #region TraceFatal
 
-        public static void TraceFatal(string pstrTrace)
+        public static void TraceFatal(string trace)
         {
-            Trace(ListenerType.Fatal, pstrTrace, string.Empty);
+            Trace(ListenerType.Fatal, trace, string.Empty);
         }
 
-        public static void TraceFatal(string pstrTrace, string pstrCategory)
+        public static void TraceFatal(string trace, string category)
         {
-            Trace(ListenerType.Fatal, pstrTrace, pstrCategory);
+            Trace(ListenerType.Fatal, trace, category);
         }
 
-        public static void TraceFatal(string pstrTrace, Exception poException)
+        public static void TraceFatal(string trace, Exception exception)
         {
-            Trace(ListenerType.Fatal, pstrTrace, poException);
+            Trace(ListenerType.Fatal, trace, exception);
         }
 
-        public static void TraceFatal(string pstrTrace, Exception poException, string pstrCategory)
+        public static void TraceFatal(string trace, Exception exception, string category)
         {
-            Trace(ListenerType.Fatal, pstrTrace, poException, pstrCategory);
+            Trace(ListenerType.Fatal, trace, exception, category);
         }
 
         #endregion
 
         #region TraceDebug
 
-        public static void TraceDebug(string pstrTrace)
+        public static void TraceDebug(string trace)
         {
-            Trace(ListenerType.Debug, pstrTrace);
+            Trace(ListenerType.Debug, trace);
         }
 
-        public static void TraceDebug(string pstrTrace, string pstrCategory)
+        public static void TraceDebug(string trace, string category)
         {
-            Trace(ListenerType.Debug, pstrTrace, pstrCategory);
+            Trace(ListenerType.Debug, trace, category);
         }
 
-        public static void TraceDebug(string pstrTrace, Exception poException)
+        public static void TraceDebug(string trace, Exception exception)
         {
-            Trace(ListenerType.Debug, pstrTrace, poException);
+            Trace(ListenerType.Debug, trace, exception);
         }
 
-        public static void TraceDebug(string pstrTrace, Exception poException, string pstrCategory)
+        public static void TraceDebug(string trace, Exception exception, string category)
         {
-            Trace(ListenerType.Debug, pstrTrace, poException, pstrCategory);
+            Trace(ListenerType.Debug, trace, exception, category);
         }
 
         #endregion
 
         #region TraceDatabase
 
-        public static void TraceDatabase(string pstrTrace)
+        public static void TraceDatabase(string trace)
         {
-            Trace(ListenerType.Database, pstrTrace);
+            Trace(ListenerType.Database, trace);
         }
 
-        public static void TraceDatabase(string pstrTrace, string pstrCategory)
+        public static void TraceDatabase(string trace, string category)
         {
-            Trace(ListenerType.Database, pstrTrace, pstrCategory);
+            Trace(ListenerType.Database, trace, category);
         }
 
         #endregion
 
         #region TraceSQL
 
-        public static void TraceSQL(string pstrTrace)
+        public static void TraceSQL(string trace)
         {
-            Trace(ListenerType.SQL, pstrTrace);
+            Trace(ListenerType.SQL, trace);
         }
 
-        public static void TraceSQL(string pstrTrace, string pstrCategory)
+        public static void TraceSQL(string trace, string category)
         {
-            Trace(ListenerType.SQL, pstrTrace, pstrCategory);
+            Trace(ListenerType.SQL, trace, category);
         }
 
         #endregion
-
-        private static void CommonWrite(string pstrType, Action<TraceListener> traceAction)
-        {
-            if (Tracers.ContainsKey(pstrType))
-            {
-                // Trace listeners added to Information type
-                lock (Tracers[pstrType])
-                    Tracers[pstrType].AsParallel().ForAll(dict => dict.Value.ForEach(traceAction));
-            }
-        }
-
-        private static void InternalAddListener(string type, TraceListener traceListener)
-        {
-            var listenerType = traceListener.GetType();
-
-            if (!Tracers[type].ContainsKey(listenerType))
-            {
-                Tracers[type].Add(listenerType, new List<TraceListener>());
-            }
-
-            Tracers[type][listenerType].Add(traceListener);
-        }
-
     }
-
-    // Our base implementation of the TraceListener -> Used to build custom listener
-    public abstract class AdvancedTraceListener : TraceListener
-    {
-        // The standard write methods will never be called on the AdvancedTraceListener
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void Write(string pstrMessage) { }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void Write(string pstrMessage, string pstrCategory) { }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void Write(object poTrace) { }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void Write(object poTrace, string pstrCategory) { }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void WriteLine(string pstrMessage) { }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void WriteLine(string pstrMessage, string pstrCategory) { }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void WriteLine(object poTrace) { }
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public override void WriteLine(object poTrace, string pstrCategory) { }
-
-        // Advanced trace method
-        public virtual void WriteEx(string pstrType, string pstrTrace) { }
-        public virtual void WriteEx(string pstrType, string pstrTrace, string pstrCategory) { }
-        public virtual void WriteEx(string pstrType, object poTrace) { }
-        public virtual void WriteEx(string pstrType, object poTrace, string pstrCategory) { }
-        public virtual void WriteEx(string pstrType, string pstrMessage, Exception poException) { }
-        public virtual void WriteEx(string pstrType, string pstrMessage, Exception poException, string pstrUserCategory) { }
-        public virtual void WriteLineEx(string pstrType, string pstrTrace) { }
-        public virtual void WriteLineEx(string pstrType, string pstrTrace, string pstrCategory) { }
-        public virtual void WriteLineEx(string pstrType, object poTrace) { }
-        public virtual void WriteLineEx(string pstrType, object poTrace, string pstrCategory) { }
-        public virtual void WriteLineEx(string pstrType, string pstrMessage, Exception poException) { }
-        public virtual void WriteLineEx(string pstrType, string pstrMessage, Exception poException, string pstrUserCategory) { }
-    }
-
 }
