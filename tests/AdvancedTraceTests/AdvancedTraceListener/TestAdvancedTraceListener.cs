@@ -65,24 +65,14 @@ namespace AdvancedTraceTests.AdvancedTraceListener
         }
 
 
-        public override void WriteEx(string type, string message) { WriteEx(type, message, null, string.Empty); }
-        public override void WriteEx(string type, string message, string category) { WriteEx(type, message, null, category); }
-        public override void WriteEx(string type, object value) { WriteEx(type, value.ToString(), null, string.Empty); }
-        public override void WriteEx(string type, object value, string category) { WriteEx(type, value.ToString(), null, category); }
-        public override void WriteEx(string type, string message, Exception exception) { WriteEx(type, message, exception, string.Empty); }
-        public override void WriteEx(string type, string message, Exception exception, string category)
+        public override void WriteEx(string type, object message, string category, Exception exception)
         {
             LastMessage = "[Type : " + type + "] "
                           + (string.IsNullOrWhiteSpace(category) ? "" : " - [Category : " + category + "] ")
                           + message
                           + (exception == null ? "" : " (Exception : " + exception + ") ");
         }
-        public override void WriteLineEx(string type, string message) { WriteLineEx(type, message, null, string.Empty); }
-        public override void WriteLineEx(string type, string message, string category) { WriteLineEx(type, message, null, category); }
-        public override void WriteLineEx(string type, object value) { WriteLineEx(type, value.ToString(), null, string.Empty); }
-        public override void WriteLineEx(string type, object value, string category) { WriteLineEx(type, value.ToString(), null, category); }
-        public override void WriteLineEx(string type, string message, Exception exception) { WriteLineEx(type, message, exception, string.Empty); }
-        public override void WriteLineEx(string type, string message, Exception exception, string category)
+        public override void WriteLineEx(string type, object message, string category, Exception exception)
         {
             LastMessage = "NL [Type : " + type + "] "
                           + (string.IsNullOrWhiteSpace(category) ? "" : " - [Category : " + category + "] ")

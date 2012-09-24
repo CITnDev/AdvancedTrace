@@ -43,7 +43,7 @@ namespace AdvancedTraceTests
             AdvancedTrace.TraceDebug("Debug");
             Assert.False(listener.IsNewMessage());
             Assert.False(advListener.IsNewMessage());
-            AdvancedTrace.TraceSQL("SQL");
+            AdvancedTrace.TraceSql("SQL");
             Assert.False(listener.IsNewMessage());
             Assert.False(advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
@@ -93,7 +93,7 @@ namespace AdvancedTraceTests
             AdvancedTrace.TraceDebug("Debug");
             Assert.False(listener.IsNewMessage());
             Assert.False(advListener.IsNewMessage());
-            AdvancedTrace.TraceSQL("SQL");
+            AdvancedTrace.TraceSql("SQL");
             Assert.False(listener.IsNewMessage());
             Assert.False(advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
@@ -141,7 +141,7 @@ namespace AdvancedTraceTests
             AdvancedTrace.TraceDebug("Debug");
             Assert.True(listener.IsNewMessage());
             Assert.True(advListener.IsNewMessage());
-            AdvancedTrace.TraceSQL("SQL");
+            AdvancedTrace.TraceSql("SQL");
             Assert.True(listener.IsNewMessage());
             Assert.True(advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
@@ -190,7 +190,7 @@ namespace AdvancedTraceTests
             AdvancedTrace.TraceDebug("Debug");
             Assert.True(listener.IsNewMessage());
             Assert.True(advListener.IsNewMessage());
-            AdvancedTrace.TraceSQL("SQL");
+            AdvancedTrace.TraceSql("SQL");
             Assert.True(listener.IsNewMessage());
             Assert.True(advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
@@ -241,7 +241,7 @@ namespace AdvancedTraceTests
             AdvancedTrace.TraceDebug("Debug");
             Assert.True(listener.IsNewMessage());
             Assert.True(advListener.IsNewMessage());
-            AdvancedTrace.TraceSQL("SQL");
+            AdvancedTrace.TraceSql("SQL");
             Assert.True(listener.IsNewMessage());
             Assert.True(advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
