@@ -10,199 +10,212 @@ namespace AdvancedTraceTests
     [TestFixture]
     public class AdvancedTraceTests
     {
+        private TestListener _listener;
+        private TestAdvancedTraceListener _advListener;
+        
+        [SetUp]
+        public void InitTest()
+        {
+            _listener = new TestListener();
+            _advListener = new TestAdvancedTraceListener();
+        }
+
+        [TearDown]
+        public void ClearAll()
+        {
+            _listener.Dispose();
+            _advListener.Dispose();
+
+            AdvancedTrace.RemoveAllTraceListener();
+        }
+
         [Test]
         public void SimpleTrace()
         {
-            var listener = new TestListener();
-            var advListener = new TestAdvancedTraceListener();
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, listener);
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, advListener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, _listener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, _advListener);
 
             AdvancedTrace.TraceInformation("Default information");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception", new FileNotFoundException("file.ext"));
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information on a category", "Category2");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception on a category", new Exception("Base exception"), "Category1");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceDatabase("Database");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceError("Error");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceFatal("Fatal");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceDebug("Debug");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceSql("SQL");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceWarning("Warning");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceInformation("Finish");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
+
+            AdvancedTrace.RemoveTraceListener(AdvancedTrace.ListenerType.Information, _listener);
         }
 
         [Test]
         public void MultipleTrace()
         {
-            var listener = new TestListener();
-            var advListener = new TestAdvancedTraceListener();
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, listener);
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Warning, listener);
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, advListener);
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Problem, advListener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, _listener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Warning, _listener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Information, _advListener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.Problem, _advListener);
 
             AdvancedTrace.TraceInformation("Default information");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception", new FileNotFoundException("file.ext"));
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information on a category", "Category2");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception on a category", new Exception("Base exception"), "Category1");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceDatabase("Database");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceError("Error");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceFatal("Fatal");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceDebug("Debug");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceSql("SQL");
-            Assert.False(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
-            Assert.False(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.False(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceWarning("Warning");
-            Assert.True(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceInformation("Finish");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
         }
 
         [Test]
         public void TraceAll()
         {
-            var listener = new TestListener();
-            var advListener = new TestAdvancedTraceListener();
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, listener);
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, advListener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, _listener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, _advListener);
 
             AdvancedTrace.TraceInformation("Default information");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception", new FileNotFoundException("file.ext"));
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information on a category", "Category2");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception on a category", new Exception("Base exception"), "Category1");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceDatabase("Database");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceError("Error");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceFatal("Fatal");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceDebug("Debug");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceSql("SQL");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceWarning("Warning");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceInformation("Finish");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
         }
 
         [Test]
         public void TraceAllWithRemoveType()
         {
-            var listener = new TestListener();
-            var advListener = new TestAdvancedTraceListener();
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, listener);
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, advListener);
-            AdvancedTrace.RemoveTraceListener(AdvancedTrace.ListenerType.Warning, advListener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, _listener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, _advListener);
+            AdvancedTrace.RemoveTraceListener(AdvancedTrace.ListenerType.Warning, _advListener);
 
             AdvancedTrace.TraceInformation("Default information");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception", new FileNotFoundException("file.ext"));
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information on a category", "Category2");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception on a category", new Exception("Base exception"), "Category1");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceDatabase("Database");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceError("Error");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceFatal("Fatal");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceDebug("Debug");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceSql("SQL");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceWarning("Warning");
-            Assert.True(listener.IsNewMessage());
-            Assert.False(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.False(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceInformation("Finish");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
         }
 
         [Test]
@@ -210,55 +223,53 @@ namespace AdvancedTraceTests
         {
             const string newType = "__NEW_TYPE__";
 
-            var listener = new TestListener();
-            var advListener = new TestAdvancedTraceListener();
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, listener);
-            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, advListener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, _listener);
+            AdvancedTrace.AddTraceListener(AdvancedTrace.ListenerType.All, _advListener);
             AdvancedTrace.AddTraceType(newType);
 
             AdvancedTrace.TraceInformation("Default information");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception", new FileNotFoundException("file.ext"));
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information on a category", "Category2");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceInformation("Information with exception on a category", new Exception("Base exception"), "Category1");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceDatabase("Database");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceError("Error");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceFatal("Fatal");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceDebug("Debug");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceSql("SQL");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceProblem("Problem");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
             AdvancedTrace.TraceWarning("Warning");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
 
             AdvancedTrace.Trace(newType, "New type");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
 
             AdvancedTrace.TraceInformation("Finish");
-            Assert.True(listener.IsNewMessage());
-            Assert.True(advListener.IsNewMessage());
+            Assert.True(_listener.IsNewMessage());
+            Assert.True(_advListener.IsNewMessage());
         }
     }
 }

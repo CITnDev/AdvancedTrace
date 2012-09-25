@@ -1,15 +1,19 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace AdvancedTraceLib
 {
     public class AdvancedTrace
     {
-        private static readonly Dictionary<string, List<TraceListener>> Tracers;
+        private static readonly ConcurrentDictionary<string, List<TraceListener>> Tracers;
+        private static readonly ConcurrentDictionary<string, ReaderWriterLockSlim> TraceLockers;
         private static readonly List<TraceListener> TraceAll;
+        private static readonly ReaderWriterLockSlim LockTraceAll = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
 
         public class ListenerType
         {
@@ -28,7 +32,8 @@ namespace AdvancedTraceLib
 
         static AdvancedTrace()
         {
-            Tracers = new Dictionary<string, List<TraceListener>>();
+            Tracers = new ConcurrentDictionary<string, List<TraceListener>>();
+            TraceLockers = new ConcurrentDictionary<string, ReaderWriterLockSlim>();
             TraceAll = new List<TraceListener>();
 
             AddTraceType(ListenerType.All);
@@ -55,23 +60,17 @@ namespace AdvancedTraceLib
             if (type == ListenerType.All)
                 return;
 
-            lock (Tracers)
-            {
-                if (!Tracers.ContainsKey(type))
-                    Tracers[type] = new List<TraceListener>();
-            }
+            var listeners = new List<TraceListener>();
+            var locker = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
+            Tracers.TryAdd(type, listeners);
+            TraceLockers.TryAdd(type, locker);
 
-            lock (Tracers[type])
+            LockTraceAll.EnterReadLock();
+            foreach (var listener in TraceAll)
             {
-                lock (TraceAll)
-                {
-                    foreach (var listener in TraceAll)
-                    {
-                        InternalAddListener(type, listener);
-                    }
-                }
+                InternalAddListener(type, listener);
             }
-
+            LockTraceAll.ExitReadLock();
         }
 
         // Add a TraceListener to a type
@@ -79,26 +78,18 @@ namespace AdvancedTraceLib
         {
             if (type == ListenerType.All)
             {
-                lock (Tracers)
+                foreach (var tracerKey in Tracers.Keys)
                 {
-                    foreach (var tracerKey in Tracers.Keys)
-                    {
-                        InternalAddListener(tracerKey, traceListener);
-                    }
+                    InternalAddListener(tracerKey, traceListener);
                 }
 
-                lock (TraceAll)
-                {
-                    TraceAll.Add(traceListener);
-                }
+                LockTraceAll.EnterWriteLock();
+                TraceAll.Add(traceListener);
+                LockTraceAll.ExitWriteLock();
             }
             else
             {
-                lock (Tracers)
-                {
-                    if (Tracers.ContainsKey(type))
-                        InternalAddListener(type, traceListener);
-                }
+                InternalAddListener(type, traceListener);
             }
         }
 
@@ -107,26 +98,24 @@ namespace AdvancedTraceLib
         {
             if (type == ListenerType.All)
             {
-                lock (TraceAll)
+                LockTraceAll.EnterWriteLock();
+                TraceAll.Remove(traceListener);
+                LockTraceAll.ExitWriteLock();
+
+                foreach (var tracerKey in Tracers.Keys)
                 {
-                    TraceAll.Remove(traceListener);
-                }
-                lock (Tracers)
-                {
-                    foreach (var tracerKey in Tracers.Keys)
-                    {
-                        lock (Tracers[tracerKey])
-                        {
-                            Tracers[tracerKey].Remove(traceListener);
-                        }
-                    }
+                    Tracers[tracerKey].Remove(traceListener);
                 }
             }
             else
             {
-                lock (Tracers[type])
+                ReaderWriterLockSlim locker;
+
+                if (TraceLockers.TryGetValue(type, out locker))
                 {
+                    locker.EnterWriteLock();
                     Tracers[type].Remove(traceListener);
+                    locker.ExitWriteLock();
                 }
             }
         }
@@ -134,10 +123,13 @@ namespace AdvancedTraceLib
         // Remove a TraceListener from a type
         public static void RemoveAllTraceListener()
         {
-            lock (Tracers)
+            foreach (var locker in TraceLockers)
             {
-                Tracers.Clear();
+                locker.Value.EnterWriteLock();
+                Tracers[locker.Key].Clear();
+                locker.Value.ExitWriteLock();
             }
+            TraceAll.Clear();
         }
 
         #endregion
@@ -295,10 +287,7 @@ namespace AdvancedTraceLib
 
         public static void Flush()
         {
-            lock (Tracers)
-            {
-                Tracers.SelectMany(type => type.Value).Distinct().AsParallel().ForAll(listener => listener.Flush());
-            }
+            Tracers.SelectMany(type => type.Value).Distinct().AsParallel().ForAll(listener => listener.Flush());
         }
 
         #endregion
@@ -529,17 +518,28 @@ namespace AdvancedTraceLib
 
         private static void CommonWrite(string traceType, Action<TraceListener> traceAction)
         {
-            if (Tracers.ContainsKey(traceType))
+            ReaderWriterLockSlim locker;
+            if (TraceLockers.TryGetValue(traceType, out locker))
             {
+                locker.EnterReadLock();
                 // Trace listeners added to Information type
-                lock (Tracers[traceType])
-                    Tracers[traceType].AsParallel().ForAll(traceAction);
+                foreach (var tracer in Tracers[traceType])
+                {
+                    traceAction(tracer);
+                }
+                locker.ExitReadLock();
             }
         }
 
         private static void InternalAddListener(string type, TraceListener traceListener)
         {
-            Tracers[type].Add(traceListener);
+            ReaderWriterLockSlim locker;
+            if (TraceLockers.TryGetValue(type, out locker))
+            {
+                locker.EnterWriteLock();
+                Tracers[type].Add(traceListener);
+                locker.ExitWriteLock();
+            }
         }
 
     }
