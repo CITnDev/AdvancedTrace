@@ -1,47 +1,24 @@
-Thumbs.db
-bin/
-obj/
-.idea/
-latest/
-/env-vars.bat
-*.suo
-#ignore thumbnails created by windows
-Thumbs.db
-#Ignore files build by Visual Studio
-*.obj
-*.exe
-*.pdb
-*.user
-*.aps
-*.pch
-*.vspscc
-*_i.c
-*_p.c
-*.ncb
-*.suo
-*.tlb
-*.tlh
-*.bak
-*.cache
-*.ilk
-*.log
+#Projects output
 [Bb]in
 [Dd]ebug*/
-*.lib
-*.sbr
-*.resharper.user
-obj/
 [Rr]elease*/
-_ReSharper*/
-[Tt]est[Rr]esult*
-App_Data/
-build/*.dll
-*.user
+obj/
 
-release/latest/
+#Nuget files
 *.nupkg
-release/*
-BuildZipOutput
+packages/
+
+#Resharper files
+*.resharper.user
+_ReSharper*/
+
+#Visual Studio files
+*.suo
+*.userprefs
+*.user
 
 #Xamarin
 test-results/
+
+#Windows files
+Thumbs.db
