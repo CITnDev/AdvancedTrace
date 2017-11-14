@@ -145,11 +145,11 @@ namespace AdvancedTraceLib
         {
             Action<TraceListener> traceAction = listener =>
             {
-                if (listener is AdvancedTraceListener)
+                if (listener is IAdvancedTraceListener)
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(traceType, value);
+                        ((IAdvancedTraceListener)listener).WriteLineEx(traceType, value);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(traceType, value);
+                        ((IAdvancedTraceListener)listener).WriteEx(traceType, value);
                 else
                     listener.WriteLine(value);
             };
@@ -161,11 +161,11 @@ namespace AdvancedTraceLib
         {
             Action<TraceListener> traceAction = listener =>
             {
-                if (listener is AdvancedTraceListener)
+                if (listener is IAdvancedTraceListener)
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(traceType, value, userCategory);
+                        ((IAdvancedTraceListener)listener).WriteLineEx(traceType, value, userCategory);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(traceType, value, userCategory);
+                        ((IAdvancedTraceListener)listener).WriteEx(traceType, value, userCategory);
                 else
                     listener.WriteLine(value);
             };
@@ -177,11 +177,11 @@ namespace AdvancedTraceLib
         {
             Action<TraceListener> traceAction = listener =>
             {
-                if (listener is AdvancedTraceListener)
+                if (listener is IAdvancedTraceListener)
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(traceType, value);
+                        ((IAdvancedTraceListener)listener).WriteLineEx(traceType, value);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(traceType, value);
+                        ((IAdvancedTraceListener)listener).WriteEx(traceType, value);
                 else
                     listener.WriteLine(value);
             };
@@ -193,11 +193,11 @@ namespace AdvancedTraceLib
         {
             Action<TraceListener> traceAction = listener =>
             {
-                if (listener is AdvancedTraceListener)
+                if (listener is IAdvancedTraceListener)
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(traceType, value, userCategory);
+                        ((IAdvancedTraceListener)listener).WriteLineEx(traceType, value, userCategory);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(traceType, value, userCategory);
+                        ((IAdvancedTraceListener)listener).WriteEx(traceType, value, userCategory);
                 else
                     listener.WriteLine(value);
             };
@@ -209,11 +209,11 @@ namespace AdvancedTraceLib
         {
             Action<TraceListener> traceAction = listener =>
             {
-                if (listener is AdvancedTraceListener)
+                if (listener is IAdvancedTraceListener)
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(traceType, value, null, exception);
+                        ((IAdvancedTraceListener)listener).WriteLineEx(traceType, value, null, exception);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(traceType, value, null, exception);
+                        ((IAdvancedTraceListener)listener).WriteEx(traceType, value, null, exception);
                 else
                     listener.WriteLine(value + " " + exception.ToString());
             };
@@ -225,11 +225,11 @@ namespace AdvancedTraceLib
         {
             Action<TraceListener> traceAction = listener =>
             {
-                if (listener is AdvancedTraceListener)
+                if (listener is IAdvancedTraceListener)
                     if (writeLine)
-                        ((AdvancedTraceListener)listener).WriteLineEx(traceType, value, userCategory, exception);
+                        ((IAdvancedTraceListener)listener).WriteLineEx(traceType, value, userCategory, exception);
                     else
-                        ((AdvancedTraceListener)listener).WriteEx(traceType, value, userCategory, exception);
+                        ((IAdvancedTraceListener)listener).WriteEx(traceType, value, userCategory, exception);
                 else
                     listener.WriteLine(value + " " + exception.ToString(), userCategory);
             };
@@ -545,7 +545,7 @@ namespace AdvancedTraceLib
     }
 
     // Our base implementation of the TraceListener -> Used to build custom listener
-    public abstract class AdvancedTraceListener : TraceListener
+    public abstract class AdvancedTraceListener : TraceListener, IAdvancedTraceListener
     {
         // The standard write methods will never be called on the AdvancedTraceListener
         [EditorBrowsable(EditorBrowsableState.Never)]
@@ -568,6 +568,12 @@ namespace AdvancedTraceLib
         // Advanced trace method
         public virtual void WriteEx(string traceType, object value, string pstrUserCategory = null, Exception exception = null) { }
         public virtual void WriteLineEx(string traceType, object value, string pstrUserCategory = null, Exception exception = null) { }
+    }
+
+    public interface IAdvancedTraceListener
+    {
+        void WriteEx(string traceType, object value, string pstrUserCategory = null, Exception exception = null);
+        void WriteLineEx(string traceType, object value, string pstrUserCategory = null, Exception exception = null);
     }
 
 }
